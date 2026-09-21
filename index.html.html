@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Blind Family Decision Assessment — Handoff Edition</title>
+<style>
+:root{--bg:#f5f6f8;--card:#fff;--text:#171717;--muted:#667085;--border:#d8dbe2;--accent:#2457d6;--soft:#eef3ff;--good:#1f7a3f;--warn:#8a5a00}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+main{max-width:980px;margin:0 auto;padding:24px}
+h1{font-size:32px;line-height:1.15;margin:0 0 10px} h2{font-size:22px;margin:0 0 8px} h3{font-size:18px;margin:0}
+p{line-height:1.6}.small{font-size:14px;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:20px;margin:16px 0}
+.hero{padding:26px}.badges{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.badge{border:1px solid var(--border);border-radius:999px;padding:6px 10px;font-size:13px;color:var(--muted);background:#fff}
+button{font:inherit;border:1px solid var(--border);background:#fff;border-radius:12px;padding:11px 16px;min-height:44px;cursor:pointer}
+button.primary{background:var(--accent);color:#fff;border-color:var(--accent)} button.secondary{background:var(--soft);border-color:#c9d5ff}
+button:disabled{opacity:.5;cursor:not-allowed}.actions{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}.hidden{display:none!important}
+.progress{height:10px;border-radius:999px;background:#e9ebf0;overflow:hidden;margin-top:14px}.progress>div{height:100%;background:var(--accent);width:0%;transition:width .2s ease}
+.goal{background:#fff;border:1px solid var(--border);border-radius:16px;padding:16px;margin:12px 0}.goal-title{font-weight:700;line-height:1.45;margin-bottom:12px}
+.scale{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}.scale label{border:1px solid var(--border);border-radius:12px;padding:10px;display:flex;gap:7px;align-items:flex-start;font-size:13px;min-height:64px;cursor:pointer}.scale label:hover{background:#fafbff}
+.notice{padding:12px 14px;border-radius:12px;background:#fff7e6;border:1px solid #f0d49a;color:#6a4a12;font-size:14px}
+.method{padding:12px 14px;border-radius:12px;background:var(--soft);font-size:14px;color:#3d4a67}
+.linkbox{width:100%;min-height:76px;border:1px solid var(--border);border-radius:12px;padding:10px;font:13px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-all;background:#fafafa}
+.result-title{font-size:26px;font-weight:800;line-height:1.25}.result-row{margin:17px 0}.result-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:14px}
+.bar{height:10px;background:#eceff3;border-radius:999px;overflow:hidden;margin-top:7px}.bar>div{height:100%;background:#667085}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.chip{border:1px solid var(--border);border-radius:999px;padding:6px 10px;font-size:12px;background:#fff}
+@media(max-width:760px){main{padding:14px}h1{font-size:26px}.scale{grid-template-columns:1fr 1fr}.scale label{min-height:48px}}
+</style>
+</head>
+<body>
+<main>
+  <section id="intro" class="card hero">
+    <h1>Blind Family Decision Assessment</h1>
+    <p>This handoff edition lets Matt complete his section, send a private handoff link to Aimee, and receive a return link after she completes hers. The shared goals for August and Zach and the final city reveal happen only after both individual sections are locked.</p>
+    <div class="badges">
+      <span class="badge">Matt → Aimee link</span><span class="badge">Aimee → Matt return link</span>
+      <span class="badge">City names hidden</span><span class="badge">Neutral goals only</span>
+      <span class="badge">35% Matt · 35% Aimee · 30% boys</span>
+    </div>
+    <div class="method">The handoff link contains only encoded questionnaire ratings. It is not encryption. Anyone who receives the link could technically decode it, so share it only with each other.</div>
+    <div class="actions">
+      <button id="start-btn" class="primary" type="button">Start / Continue</button>
+      <button id="restart-btn" type="button">Start Fresh</button>
+    </div>
+  </section>
+
+  <section id="assessment" class="hidden">
+    <div class="card">
+      <div class="small">Current section</div>
+      <h2 id="phase-title"></h2>
+      <p id="phase-desc" class="small"></p>
+      <div class="progress"><div id="progress-bar"></div></div>
+      <div id="progress-text" class="small" style="margin-top:8px"></div>
+    </div>
+    <form id="goals-form"></form>
+    <div class="actions">
+      <button id="lock-btn" class="primary" type="button"></button>
+      <button id="clear-btn" type="button">Clear Current Section</button>
+    </div>
+    <div id="validation" class="notice hidden"></div>
+  </section>
+
+  <section id="handoff" class="hidden">
+    <div class="card">
+      <div class="small" id="handoff-kicker"></div>
+      <h2 id="handoff-title"></h2>
+      <p id="handoff-desc" class="small"></p>
+      <div id="handoff-link" class="linkbox"></div>
+      <div class="actions">
+        <button id="copy-btn" class="primary" type="button">Copy Link</button>
+        <button id="open-btn" class="secondary" type="button">Open Link on This Device</button>
+      </div>
+      <div id="copy-status" class="small"></div>
+    </div>
+  </section>
+
+  <section id="final-ready" class="hidden">
+    <div class="card">
+      <div class="small">All sections locked</div>
+      <h2>Ready for the blind reveal</h2>
+      <p class="small">Matt, Aimee, and the shared goals for August and Zach are complete. The city identities have still not been shown.</p>
+      <button id="reveal-btn" class="primary" type="button">Reveal Result</button>
+    </div>
+  </section>
+
+  <section id="revealed" class="hidden"></section>
+</main>
+
+<script>
+(() => {
+  const individualGoals = [
+    {domain:'Career',text:'A role that materially expands future leadership opportunities.',mattFit:1,aimeeFit:1},
+    {domain:'Career',text:'Being able to change employers locally without forcing the family to move.',mattFit:.9,aimeeFit:.9},
+    {domain:'Time',text:'Fewer mandatory clinical workdays each month.',mattFit:1,aimeeFit:1},
+    {domain:'Time',text:'Having little or no commute on ordinary workdays.',mattFit:-1,aimeeFit:-1},
+    {domain:'Time',text:'Having substantial work that can be completed remotely from home.',mattFit:.7,aimeeFit:.7},
+    {domain:'Money',text:'Maximizing annual earning potential and optional income upside.',mattFit:1,aimeeFit:1},
+    {domain:'Money',text:'Having a simple W-2 compensation structure with full traditional benefits.',mattFit:-1,aimeeFit:-1},
+    {domain:'Money',text:'Receiving substantial up-front recruiting money for the move.',mattFit:1,aimeeFit:1},
+    {domain:'Retirement',text:'Preserving existing tax-deferred retirement assets without forcing a current taxable distribution.',mattFit:.9,aimeeFit:.9},
+    {domain:'Retirement',text:'Having a straightforward employer retirement match.',mattFit:-.8,aimeeFit:-.8},
+    {domain:'Family',text:'Living near extended family who can be part of ordinary weekly life.',mattFit:-.6,aimeeFit:-1},
+    {domain:'Family',text:'Having reliable family backup for babysitting, emergencies, school closures, and couple time.',mattFit:-.8,aimeeFit:-1},
+    {domain:'Community',text:'Having at least one genuinely close pre-existing friend nearby from the first day.',mattFit:1,aimeeFit:.7},
+    {domain:'Community',text:'Having a larger ready-made social and family network immediately after moving.',mattFit:-.2,aimeeFit:-1},
+    {domain:'Community',text:'Living in a place whose culture, people, and daily rhythms are already deeply familiar.',mattFit:-.8,aimeeFit:-.9},
+    {domain:'Lifestyle',text:'Having more land, privacy, outdoor space, and room for projects or animals.',mattFit:1,aimeeFit:.6},
+    {domain:'Lifestyle',text:'Being able to walk to restaurants, coffee, parks, or neighborhood activities from home.',mattFit:-1,aimeeFit:-1},
+    {domain:'Lifestyle',text:'Having easier driving, easier parking, and less day-to-day traffic congestion.',mattFit:.8,aimeeFit:.8},
+    {domain:'August',text:'A strong public-school path that can challenge an academically gifted child without private-school tuition.',mattFit:1,aimeeFit:1},
+    {domain:'August',text:'Having a broad menu of private and faith-based school options if public school is not the preferred fit.',mattFit:-.8,aimeeFit:-.8},
+    {domain:'Zach',text:'Having a school system with documented depth in D/HH specialists, interpreter support, ASL resources, and the ability to scale services.',mattFit:.6,aimeeFit:.6},
+    {domain:'Zach',text:'Having close family with school-system experience who can help navigate placement and services.',mattFit:-.5,aimeeFit:-.7},
+    {domain:'Travel',text:'Living near the larger airport with broader nonstop connectivity for visiting friends and family.',mattFit:-.9,aimeeFit:-1},
+    {domain:'Travel',text:'Keeping south Louisiana family visits easy and spontaneous rather than planned long-distance trips.',mattFit:-.7,aimeeFit:-1},
+    {domain:'Safety',text:'Living in the lower-crime residential environment, even if the nearby urban core has higher crime.',mattFit:.9,aimeeFit:.9},
+    {domain:'Resilience',text:'Avoiding a disaster pattern in which one parent evacuates with the children while the physician must remain at the hospital.',mattFit:.9,aimeeFit:1},
+    {domain:'Optionality',text:'Keeping open the realistic possibility of one more family move before the oldest child starts high school.',mattFit:1,aimeeFit:.8},
+    {domain:'Optionality',text:'Avoiding a move that may become geographically difficult to reverse because of family expectations and proximity.',mattFit:.9,aimeeFit:.5},
+    {domain:'Personal fit',text:'Living near a strong grappling/BJJ community and a close friend who can anchor social life.',mattFit:1,aimeeFit:.4},
+    {domain:'Personal fit',text:'Reducing the chance that one non-drinking spouse becomes the routine designated driver or sober caretaker for social events.',mattFit:.7,aimeeFit:.5},
+    {domain:'Aimee career',text:'Being physically near an affiliate of the remote employer to support visibility and relationship-building.',mattFit:-.5,aimeeFit:-.8},
+    {domain:'Adventure',text:'Trying a genuinely different lifestyle and seeing the move as an adventure rather than a return to a familiar environment.',mattFit:.9,aimeeFit:.4}
+  ];
+  const kidsGoals=[
+    {text:'Maximize academic challenge and gifted opportunities for August without requiring private-school tuition.',fit:1},
+    {text:'Preserve the widest future range of hearing, speech, ASL, interpreter, and D/HH support options for Zach.',fit:.7},
+    {text:'Make grandparents, aunt/uncle, and cousins a frequent part of the boys’ ordinary childhood.',fit:-1},
+    {text:'Give the boys more land, outdoor space, animals, projects, and room for unstructured play.',fit:.9},
+    {text:'Give the boys frequent access to walkable urban culture, restaurants, festivals, museums, music, and neighborhood events.',fit:-.9},
+    {text:'Maximize the amount of time Matt is available to the boys by reducing mandatory clinical days.',fit:.9},
+    {text:'Build in reliable extended-family backup so the parents can protect couple time and handle emergencies.',fit:-1},
+    {text:'Preserve more household income for travel, activities, college savings, investing, and other opportunities.',fit:.9},
+    {text:'Favor a lower-crime residential setting where the boys may eventually have more independent outdoor freedom.',fit:.9},
+    {text:'Minimize the chance that a major weather event separates the family because Matt must remain at the hospital.',fit:.9},
+    {text:'Keep one realistic family relocation window open before August begins high school if the first move proves imperfect.',fit:.8},
+    {text:'Expose the boys to a broad range of people and life experiences rather than optimizing only for prestige or convenience.',fit:0}
+  ];
+
+  const fresh=()=>({phase:'Matt',matt:Array(individualGoals.length).fill(null),aimee:Array(individualGoals.length).fill(null),kids:Array(kidsGoals.length).fill(null)});
+  let state=fresh();
+
+  const intro=document.getElementById('intro'),assessment=document.getElementById('assessment'),handoff=document.getElementById('handoff'),finalReady=document.getElementById('final-ready'),revealed=document.getElementById('revealed');
+  const form=document.getElementById('goals-form'),phaseTitle=document.getElementById('phase-title'),phaseDesc=document.getElementById('phase-desc'),progressBar=document.getElementById('progress-bar'),progressText=document.getElementById('progress-text'),validation=document.getElementById('validation'),lockBtn=document.getElementById('lock-btn'),clearBtn=document.getElementById('clear-btn');
+  const handoffKicker=document.getElementById('handoff-kicker'),handoffTitle=document.getElementById('handoff-title'),handoffDesc=document.getElementById('handoff-desc'),handoffLink=document.getElementById('handoff-link'),copyBtn=document.getElementById('copy-btn'),openBtn=document.getElementById('open-btn'),copyStatus=document.getElementById('copy-status');
+
+  const scale=[[0,'0 — Not important'],[1,'1 — Low'],[2,'2 — Somewhat low'],[3,'3 — Moderate'],[4,'4 — High'],[5,'5 — Critical']];
+
+  function b64urlEncode(obj){
+    const bytes=new TextEncoder().encode(JSON.stringify(obj));
+    let bin=''; bytes.forEach(b=>bin+=String.fromCharCode(b));
+    return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  }
+  function b64urlDecode(s){
+    s=s.replace(/-/g,'+').replace(/_/g,'/');
+    while(s.length%4)s+='=';
+    const bin=atob(s),bytes=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+    return JSON.parse(new TextDecoder().decode(bytes));
+  }
+  function baseUrl(){return location.href.split('#')[0];}
+  function linkFor(payload){return baseUrl()+'#handoff='+b64urlEncode(payload);}
+
+  function loadFromHash(){
+    const m=location.hash.match(/^#handoff=(.+)$/);
+    if(!m)return false;
+    try{
+      const p=b64urlDecode(m[1]);
+      if(p.phase==='Aimee' && Array.isArray(p.matt)){state={phase:'Aimee',matt:p.matt,aimee:Array(individualGoals.length).fill(null),kids:Array(kidsGoals.length).fill(null)};return true;}
+      if(p.phase==='Kids' && Array.isArray(p.matt) && Array.isArray(p.aimee)){state={phase:'Kids',matt:p.matt,aimee:p.aimee,kids:Array(kidsGoals.length).fill(null)};return true;}
+    }catch(e){}
+    return false;
+  }
+
+  function render(){
+    intro.classList.add('hidden');handoff.classList.add('hidden');finalReady.classList.add('hidden');revealed.classList.add('hidden');assessment.classList.remove('hidden');
+    const phase=state.phase, arr=phase==='Matt'?state.matt:phase==='Aimee'?state.aimee:state.kids, items=phase==='Kids'?kidsGoals:individualGoals;
+    phaseTitle.textContent=phase==='Matt'?'Matt — individual priorities':phase==='Aimee'?'Aimee — individual priorities':'Shared goals for August & Zach';
+    phaseDesc.textContent=phase==='Matt'?'Complete this section alone, then lock it to create Aimee’s handoff link.':phase==='Aimee'?'Complete this section independently. Matt’s ratings are carried in the link but are not displayed.':'Complete this section together, then reveal the final result.';
+    lockBtn.textContent=phase==='Matt'?"Lock Matt & Create Aimee Link":phase==='Aimee'?"Lock Aimee & Create Return Link":"Lock Boys’ Goals";
+    form.innerHTML='';
+    items.forEach((item,i)=>{
+      const fs=document.createElement('fieldset');fs.className='goal';
+      const t=document.createElement('div');t.className='goal-title';t.textContent=`${i+1}. ${item.text}`;fs.appendChild(t);
+      const sc=document.createElement('div');sc.className='scale';
+      scale.forEach(([v,txt])=>{
+        const lab=document.createElement('label'),inp=document.createElement('input'),sp=document.createElement('span');
+        inp.type='radio';inp.name='g'+i;inp.value=String(v);inp.checked=arr[i]===v;sp.textContent=txt;
+        inp.addEventListener('change',()=>{arr[i]=v;updateProgress();validation.classList.add('hidden');});
+        lab.append(inp,sp);sc.appendChild(lab);
+      });
+      fs.appendChild(sc);form.appendChild(fs);
+    });
+    updateProgress();window.scrollTo({top:0,behavior:'smooth'});
+  }
+  function updateProgress(){
+    const arr=state.phase==='Matt'?state.matt:state.phase==='Aimee'?state.aimee:state.kids;
+    const done=arr.filter(v=>v!==null).length,total=arr.length;
+    progressBar.style.width=Math.round(done/total*100)+'%';progressText.textContent=`${done} of ${total} priorities rated`;
+  }
+  function currentArr(){return state.phase==='Matt'?state.matt:state.phase==='Aimee'?state.aimee:state.kids;}
+
+  function lockCurrent(){
+    const arr=currentArr(),missing=arr.filter(v=>v===null).length;
+    if(missing){validation.textContent=`Please rate the remaining ${missing} item${missing===1?'':'s'} before continuing.`;validation.classList.remove('hidden');return;}
+    assessment.classList.add('hidden');
+    if(state.phase==='Matt'){
+      const url=linkFor({phase:'Aimee',matt:state.matt});
+      showHandoff('Matt section locked','Send this link to Aimee','Aimee can open this link on her own phone or computer. She will see only her questionnaire.',url);
+    }else if(state.phase==='Aimee'){
+      const url=linkFor({phase:'Kids',matt:state.matt,aimee:state.aimee});
+      showHandoff('Aimee section locked','Send this return link to Matt','This returns both locked individual profiles to Matt. The next page is the shared goals section for August and Zach.',url);
+    }else{
+      finalReady.classList.remove('hidden');
+      window.scrollTo({top:0,behavior:'smooth'});
+    }
+  }
+
+  function showHandoff(kicker,title,desc,url){
+    handoffKicker.textContent=kicker;handoffTitle.textContent=title;handoffDesc.textContent=desc;handoffLink.textContent=url;
+    handoff.classList.remove('hidden');copyStatus.textContent='';
+    copyBtn.onclick=async()=>{try{await navigator.clipboard.writeText(url);copyStatus.textContent='Link copied.';}catch(e){copyStatus.textContent='Copy failed. Select the link text manually and copy it.';}};
+    openBtn.onclick=()=>{location.href=url;location.reload();};
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  function scorePerson(name){
+    const arr=name==='Matt'?state.matt:state.aimee;let num=0,den=0;const c=[];
+    individualGoals.forEach((g,i)=>{const w=arr[i]??0,fit=name==='Matt'?g.mattFit:g.aimeeFit;num+=w*fit;den+=w*Math.abs(fit);c.push({label:g.text,domain:g.domain,value:w*fit});});
+    return {score:den?num/den:0,contributions:c};
+  }
+  function scoreKids(){let num=0,den=0;const c=[];kidsGoals.forEach((g,i)=>{const w=state.kids[i]??0;num+=w*g.fit;den+=w*Math.abs(g.fit);c.push({label:g.text,value:w*g.fit});});return {score:den?num/den:0,contributions:c};}
+  function strength(s){const a=Math.abs(s);if(a<.08)return'essentially tied';if(a<.22)return'slight lean';if(a<.42)return'moderate lean';return'strong lean';}
+  function city(s){return s>0?'Edmond / Oklahoma City':s<0?'New Orleans':'Tie';}
+  function row(label,s){const pct=Math.min(100,Math.round(Math.abs(s)*100));return `<div class="result-row"><div class="result-head"><strong>${label}</strong><span>${city(s)} — ${strength(s)}</span></div><div class="bar"><div style="width:${pct}%"></div></div></div>`;}
+  function top(arr,s){const d=Math.sign(s)||1;return arr.filter(x=>d*x.value>0).sort((a,b)=>Math.abs(b.value)-Math.abs(a.value)).slice(0,4);}
+  function chips(items){return items.map(x=>`<span class="chip">${x.domain?x.domain+': ':''}${x.label}</span>`).join('');}
+  function revealResults(){
+    const m=scorePerson('Matt'),a=scorePerson('Aimee'),k=scoreKids(),c=m.score*.35+a.score*.35+k.score*.30;
+    finalReady.classList.add('hidden');
+    revealed.innerHTML=`<div class="card"><div class="small">Blind result</div><div class="result-title">Combined family result: ${city(c)} — ${strength(c)}</div><p class="small">Pre-committed weighting: Matt 35%, Aimee 35%, shared goals for August & Zach 30%.</p>${row('Matt',m.score)}${row('Aimee',a.score)}${row('Shared goals for the boys',k.score)}${row('Combined family result',c)}</div><div class="card"><h3>Matt — strongest drivers</h3><div class="chips">${chips(top(m.contributions,m.score))}</div></div><div class="card"><h3>Aimee — strongest drivers</h3><div class="chips">${chips(top(a.contributions,a.score))}</div></div><div class="card"><h3>Shared goals for August & Zach — strongest drivers</h3><div class="chips">${chips(top(k.contributions,k.score))}</div></div><div class="card"><h3>Pending factual modifiers not scored</h3><p class="small">Louisiana physician-health-program employer disclosure/workplace-monitor requirements, the final Ochsner academic buy-down, any Ochsner signing bonus, and other still-unknown terms remain outside the blind score.</p></div>`;
+    revealed.classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  document.getElementById('start-btn').addEventListener('click',()=>{if(!loadFromHash())state=fresh();render();});
+  document.getElementById('restart-btn').addEventListener('click',()=>{history.replaceState(null,'',baseUrl());state=fresh();render();});
+  lockBtn.addEventListener('click',lockCurrent);
+  clearBtn.addEventListener('click',()=>{const arr=currentArr();for(let i=0;i<arr.length;i++)arr[i]=null;render();});
+  document.getElementById('reveal-btn').addEventListener('click',revealResults);
+
+  if(location.hash.startsWith('#handoff=')){
+    loadFromHash();
+    intro.classList.add('hidden');
+    render();
+  }
+})();
+</script>
+</body>
+</html>
